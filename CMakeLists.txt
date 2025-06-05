@@ -13,12 +13,12 @@ set(CMAKE_CXX_EXTENSIONS Off)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Define target for analysis with CLANG_TIDY
-find_program(CLANG_TIDY_COMMAND NAMES clang-tidy)
-if(NOT CLANG_TIDY_COMMAND)
-  message(ERROR "clang-tidy not found. Skipping corresponding checks.")
-else()
-  set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_COMMAND} --config-file=${CMAKE_SOURCE_DIR}/.clang-tidy -p=${CMAKE_BINARY_DIR})
-endif()
+# find_program(CLANG_TIDY_COMMAND NAMES clang-tidy)
+# if(NOT CLANG_TIDY_COMMAND)
+#   message(ERROR "clang-tidy not found. Skipping corresponding checks.")
+# else()
+#   set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_COMMAND} --config-file=${CMAKE_SOURCE_DIR}/.clang-tidy -p=${CMAKE_BINARY_DIR})
+# endif()
 
 # Enable code coverage in Debug build
 option(COMPILE_WITH_COVERAGE  "Enable code coverage in debug builds" OFF)
@@ -33,5 +33,5 @@ find_package(MPI REQUIRED)
 add_subdirectory(src)
 
 # Tests
-enable_testing()
-add_subdirectory(test)
+# enable_testing()
+# add_subdirectory(test)

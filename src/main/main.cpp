@@ -9,16 +9,19 @@
 #include <vector>
 
 #include <mpi.h>
+//#include "scorep/SCOREP_User.h"
 
 #include "life.h"
 
 struct data{
-    const int N;
+    const int N; // NOLINT
     std::vector<std::vector<int>> field;
     std::vector<int> boundaryN;
     std::vector<int> boundaryE;
     std::vector<int> boundaryS;
     std::vector<int> boundaryW;
+    std::random_device rd;
+    std::mt19937 gen;
 
     data(const int n, const int init = 0) :
             N(n),
@@ -26,9 +29,10 @@ struct data{
             boundaryN(n, init),
             boundaryE(n, init),
             boundaryS(n, init),
-            boundaryW(n, init){
-        std::random_device rd;
-        std::mt19937 gen(rd());
+            boundaryW(n, init),
+	    gen(rd())
+    {
+        //SCOREP_USER_REGION( "<data>", SCOREP_USER_REGION_TYPE_FUNCTION )
         std::uniform_int_distribution<> dis(0, 4);
 
         for(auto& v : field) {
@@ -52,6 +56,7 @@ bool isSquare(const int nprocs){
 
 int swapBoundaries(MPI_Comm cart, const int rank, data* d) {
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+    //SCOREP_USER_REGION( "<swap>", SCOREP_USER_REGION_TYPE_FUNCTION )
     int sourceE = -1;
     int neighborE = -1;
     MPI_Cart_shift(cart, 1, 1, &sourceE, &neighborE);
@@ -139,40 +144,54 @@ int swapBoundaries(MPI_Comm cart, const int rank, data* d) {
     return 0;
 }
 
-void printData(data *d){
+void printData(data *d, const int window = 0){
+    int xlow = 0;
+    int xhigh = d->N;
+    int ylow = 0;
+    int yhigh = d->N;
+    if(window > 0) {
+	xhigh = window;
+	yhigh = window;
+    }
     const int width = 5;
     std::cout << '\n';
-    std::cout << std::setw(width) << "";
-    for(auto cell : d->boundaryN){
-        std::cout << std::setw(width) << cell; // NOLINT
+
+    if(window == 0){
+        std::cout << std::setw(width) << "";
+        for(unsigned int i = xlow; i < xhigh; i++){
+            std::cout << std::setw(width) << d->boundaryN[i]; // NOLINT
+        }
+        std::cout << '\n';
     }
-    std::cout << '\n';
 
     std::cout << '\n';
-    for(unsigned int i = 0; i < d->N; i++){
+    for(unsigned int i = xlow; i < xhigh; i++){
         std::cout << std::setw(width) << d->boundaryW[i]; // NOLINT
-        for(unsigned int j = 0; j < d->N; j++){
+        for(unsigned int j = ylow; j < yhigh; j++){
             std::cout << std::setw(width) << d->field[i][j]; // NOLINT
         }
-        std::cout << std::setw(width) << d->boundaryE[i];
+	if(window == 0){
+	    std::cout << std::setw(width) << d->boundaryE[i];
+	}
 
         std::cout << '\n';
     }
 
     std::cout << '\n';
     std::cout << std::setw(width) << "";
-    for(auto cell : d->boundaryS){
-        std::cout << std::setw(width) << cell;
+    for(unsigned int i = xlow; i < xhigh; i++){
+        std::cout << std::setw(width) << d->boundaryS[i];
     }
     std::cout << '\n';
 
     std::cout << '\n';
 
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(250ms);
+    //using namespace std::chrono_literals;
+    //std::this_thread::sleep_for(250ms);
 }
 
-int applyRules(const int N, const int E, const int S, const int W, const int C){ // NOLINT
+int applyRules(const int N, const int E, const int S, const int W, const int C, double random){ // NOLINT
+    //SCOREP_USER_REGION( "<applyRules>", SCOREP_USER_REGION_TYPE_FUNCTION )
     int newC = C;
     int neighborsabove = 0;
     int neighborsbelow = 0;
@@ -197,20 +216,10 @@ int applyRules(const int N, const int E, const int S, const int W, const int C){
         neighborsbelow += 1;
     }
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0.0, 1.0);
-    double random = dis(gen);
     double likelyness = 0.01; // NOLINT
 
-    if(neighborsabove > neighborsbelow){
-        newC -= 1;
-    } else if (neighborsabove < neighborsbelow) {
-        if (N == 0 && E == 0 && S == 0 && W == 0) {
-            newC -=1;
-        } else {
-            newC += 1;
-        }
+    if(neighborsabove != neighborsbelow){
+	newC += (-2*((N==0)*(E==0)*(S==0)*(W==0) || (neighborsabove > neighborsbelow))) + 1;
     } else {
         likelyness = 0.45; // NOLINT
     }
@@ -229,11 +238,23 @@ int applyRules(const int N, const int E, const int S, const int W, const int C){
 }
 
 void updateField(data *d){
+    //SCOREP_USER_REGION( "<updateField>", SCOREP_USER_REGION_TYPE_FUNCTION )
     int N = 0;
     int E = 0;
     int S = 0;
     int W = 0;
     int C = 0;
+
+    std::uniform_real_distribution<> dis(0.0, 1.0);
+    double random = 0.0;
+
+    // Generate many numbers efficiently
+    std::vector<double> random_numbers;
+    random_numbers.reserve(d->N*d->N);
+    for(int i = 0; i < d->N*d->N; ++i) {
+        random_numbers.push_back(dis(d->gen));
+    }
+
     for(unsigned int i = 0; i < d->N; i++){
         for(unsigned int j = 0; j < d->N; j++){
             if(i == 0){
@@ -258,18 +279,21 @@ void updateField(data *d){
                 N = d->field[i][j+1];
             }
             C = d->field[i][j];
-            d->field[i][j] = applyRules(N, E, S, W, C);
+            d->field[i][j] = applyRules(N, E, S, W, C, random_numbers[i+d->N*j]);
         }
     }
 }
 
 int main(int argc, char* argv[]){
-    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays, cppcoreguidelines-avoid-magic-numbers)
     MPI_Init(&argc, &argv);
     int num_procs = 0;
     int rank = 0;
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    int N = 1000;
+    int timesteps = 1000;
 
     if(rank == 0) {
         if(! isSquare(num_procs)) {
@@ -290,26 +314,25 @@ int main(int argc, char* argv[]){
     std::cout << "rank: " << rank << " coords: " << mycoordinates[0] << " " << mycoordinates[1] << '\n';
 
     // Prepare data
-    const int N = 10;
     auto d = std::make_unique<data>( N );
 
     if(rank == 1){
-        printData(d.get());
+        printData(d.get(), 20);
     }
 
     // Run timesteps
-    const int timesteps = 100;
 
     for(unsigned int i = 0; i < timesteps; i++){
         swapBoundaries(cart, rank, d.get());
         updateField(d.get());
-        if(rank == 1){
-            printData(d.get());
-        }
+    }
+
+    if(rank == 1){
+        printData(d.get(), 20);
     }
 
     MPI_Finalize();
-    // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+    // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays, cppcoreguidelines-avoid-magic-numbers)
 
     return 0;
 }
