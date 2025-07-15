@@ -30,7 +30,7 @@ struct data{
             boundaryE(n, init),
             boundaryS(n, init),
             boundaryW(n, init),
-	    gen(rd())
+            gen(rd())
     {
         //SCOREP_USER_REGION( "<data>", SCOREP_USER_REGION_TYPE_FUNCTION )
         std::uniform_int_distribution<> dis(0, 4);
@@ -150,8 +150,8 @@ void printData(data *d, const int window = 0){
     int ylow = 0;
     int yhigh = d->N;
     if(window > 0) {
-	xhigh = window;
-	yhigh = window;
+        xhigh = window;
+        yhigh = window;
     }
     const int width = 5;
     std::cout << '\n';
@@ -170,9 +170,9 @@ void printData(data *d, const int window = 0){
         for(unsigned int j = ylow; j < yhigh; j++){
             std::cout << std::setw(width) << d->field[i][j]; // NOLINT
         }
-	if(window == 0){
-	    std::cout << std::setw(width) << d->boundaryE[i];
-	}
+        if(window == 0){
+            std::cout << std::setw(width) << d->boundaryE[i];
+        }
 
         std::cout << '\n';
     }
@@ -219,7 +219,7 @@ int applyRules(const int N, const int E, const int S, const int W, const int C, 
     double likelyness = 0.01; // NOLINT
 
     if(neighborsabove != neighborsbelow){
-	newC += (-2*((N==0)*(E==0)*(S==0)*(W==0) || (neighborsabove > neighborsbelow))) + 1;
+        newC += (-2*((N==0)*(E==0)*(S==0)*(W==0) || (neighborsabove > neighborsbelow))) + 1;
     } else {
         likelyness = 0.45; // NOLINT
     }
@@ -284,7 +284,7 @@ void updateField(data *d){
     }
 }
 
-int main(int argc, char* argv[]){
+int Main(int argc, char* argv[]){
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays, cppcoreguidelines-avoid-magic-numbers)
     MPI_Init(&argc, &argv);
     int num_procs = 0;
