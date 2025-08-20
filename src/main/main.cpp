@@ -284,7 +284,7 @@ void updateField(data *d){
     }
 }
 
-int Main(int argc, char* argv[]){
+int main(int argc, char* argv[]){
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays, cppcoreguidelines-avoid-magic-numbers)
     MPI_Init(&argc, &argv);
     int num_procs = 0;
